@@ -1,0 +1,19 @@
+graph Konigsberg {
+    graph [label="Seven Bridges of Königsberg", labelloc="t", fontsize=20, splines=true, overlap=false];
+    node [shape=circle, style=filled, color=lightblue];
+
+    // Nodes with manually assigned positions
+    A [pos="0,1!"]; // Northern riverbank
+    B [pos="2,-1!"]; // Southern riverbank
+    C [pos="-1,-1!"]; // Island 1
+    D [pos="1,0!"]; // Island 2
+
+    // Edges representing bridges
+    A -- C;
+    A -- C;
+    A -- D;
+    B -- C;
+    B -- C;
+    B -- D;
+    C -- D;
+}

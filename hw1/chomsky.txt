@@ -1,0 +1,25 @@
+digraph SyntaxTree {
+    graph [label="Syntax Tree: 'The man took the book'", labelloc="t", fontsize=20];
+    node [shape=ellipse, style=filled, color=lightblue];
+
+    S [label="#Sentence#"];
+
+    NP1 [label="NP"];
+    VP [label="VP"];
+    V [label="Verb"];
+    NP2 [label="NP"];
+    N1 [label="N"];
+    Man [label="The man"];
+    Took [label="took"];
+    Book [label="the book"];
+
+    // Relationships
+    S -> NP1;
+    S -> VP;
+    NP1 -> N1;
+    N1 -> Man;
+    VP -> NP2;
+    NP2 -> Book;
+    VP -> V;
+    V -> Took;
+}
