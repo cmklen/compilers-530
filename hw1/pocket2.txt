@@ -1,0 +1,20 @@
+﻿// pocket2.txt
+// John bought a shirt with pockets.
+
+(S 
+   (NP John) 
+   (VP
+     (VP
+	   (V bought)
+	   (NP 
+	      (D a)
+		  (N shirt)
+	   )
+	 )
+	 (PP
+	    (P with)
+		(NP pockets)
+		(.)
+	 )
+   )	
+)
