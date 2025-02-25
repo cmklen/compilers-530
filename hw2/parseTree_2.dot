@@ -1,0 +1,36 @@
+digraph ParseTree {
+    rankdir=TB;
+    node [shape=circle];
+
+    E0 [label="E"];
+    E1 [label="E"];
+    T1 [label="T"];
+    T2 [label="T"];
+    T3 [label="T"];
+    F1 [label="F"];
+    F2 [label="F"];
+    F3 [label="F"];
+    id1 [label="id", shape=box];
+    id2 [label="id", shape=box];
+    id3 [label="id", shape=box];
+
+    # Expanding leftmost E first
+    E0 -> E1;
+    E0 -> op1 [label="-", shape=plaintext];
+    E0 -> T1;
+    
+    E1 -> T2;
+    
+    # Expanding T into F
+    T1 -> T3;
+    T1 -> op2 [label="*", shape=plaintext];
+    T1 -> F3;
+    
+    T2 -> F1;
+    T3 -> F2;
+    
+    # Final replacements
+    F1 -> id1;
+    F2 -> id2;
+    F3 -> id3;
+}

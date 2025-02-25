@@ -1,0 +1,29 @@
+digraph ParseTree {
+    rankdir=TB;
+    node [shape=circle];
+
+    id1 [label="id", shape=box];
+    op1 [label="-", shape=plaintext];
+    E0 [label="E"];
+    E1 [label="E"];
+    E2 [label="E"];
+    E3 [label="E"];
+    op2 [label="-", shape=plaintext];
+    op3 [label="-", shape=plaintext];
+    id2 [label="id", shape=box];
+    id3 [label="id", shape=box];
+    id4 [label="id", shape=box];
+
+
+    # Expanding rightmost E first
+    E0 -> E1;
+    E0 -> op1
+    E0 -> id1;
+    E1 -> E2;
+    E1 -> op2;
+    E1 -> id2;
+    E2 -> E3;
+    E2 -> op3;
+    E2 -> id3;
+    E3 -> id4;
+}
