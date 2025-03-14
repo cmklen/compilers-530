@@ -40,9 +40,9 @@ AddExpr<out double r>		(. double r1; .)
 = 							
 MulExpr<out r>							
 {
-    '+' MulExpr<out r1>		(. r += r1; .)				    			
+    '+' AddExpr<out r1>		(. r += r1; .)				    			
   | 
-    '-' MulExpr<out r1>		(. r -= r1; .) 
+    '-' AddExpr<out r1>		(. r -= r1; .) 
 }
 .
 
@@ -50,9 +50,9 @@ MulExpr<out double r>		(. double r1; .)
 = 
 ExpExpr<out r>		
 {
-    '*' ExpExpr<out r1>		(. r *= r1; .)	      
+    '*' MulExpr<out r1>		(. r *= r1; .)	      
   | 
-    ('/' | div) ExpExpr<out r1>		(. r /= r1; .)
+    ('/' | div) MulExpr<out r1>		(. r /= r1; .)
 }
 . 
 
