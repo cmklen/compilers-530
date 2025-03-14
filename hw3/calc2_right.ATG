@@ -1,0 +1,82 @@
+using Calculator;
+
+COMPILER Calc2
+	
+CHARACTERS
+
+	UpperLetter = 'A'..'Z'.
+	LowerLetter = 'a'..'z'.
+	letter = UpperLetter + LowerLetter.
+	digit = "0123456789" .
+	cr     = '\r' .
+	lf     = '\n' .
+	tab    = '\t' .
+	
+TOKENS
+
+  ident = letter { letter | digit }.
+  number = ( '.' digit {digit} [('e'|'E')  ['+'|'-'] digit {digit}])
+         | ( digit { digit }'.' {digit} [('E'|'e')['+'|'-'] digit {digit}])
+         | (digit {digit} ('e'|'E')  ['+'|'-'] digit {digit})
+		 | digit {digit}
+		 .
+  div = '�'.  
+  
+IGNORE cr + tab + lf
+
+PRODUCTIONS
+
+Calc2						(. double r = 0; .) 
+= 
+Expr<out r> 			    (. Console.WriteLine (r); .)
+. 
+
+Expr<out double r>
+=
+  AddExpr<out r>
+  .
+
+AddExpr<out double r>		(. double r1; .)		
+= 							
+MulExpr<out r>							
+{
+    '+' MulExpr<out r1>		(. r += r1; .)				    			
+  | 
+    '-' MulExpr<out r1>		(. r -= r1; .) 
+}
+.
+
+MulExpr<out double r>		(. double r1; .)
+= 
+ExpExpr<out r>		
+{
+    '*' ExpExpr<out r1>		(. r *= r1; .)	      
+  | 
+    ('/' | div) ExpExpr<out r1>		(. r /= r1; .)
+}
+. 
+
+ExpExpr<out double r>
+							(. double r1 = 0; .)
+=
+Factor<out r>
+[
+   '^' ExpExpr<out r1>	    (. r = Math.Pow (r, r1); .)
+]
+.
+
+Factor<out double r>		(.	r = 0; double sign = 1; .)
+=    
+[
+   "+"					
+ | 
+   "-"						(. sign = -1; .)
+]
+(
+    number					(. r = sign * Convert.ToDouble (t.val); .)				 
+  | 
+    '('  Expr<out r> ')'	(. r = sign * r; .)
+)
+.
+
+END Calc2.
