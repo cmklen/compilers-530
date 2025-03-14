@@ -1,0 +1,25 @@
+COMPILER S 
+
+CHARACTERS
+
+	cr     = '\r' .
+	lf     = '\n' .
+	tab    = '\t' .
+
+TOKENS
+
+  a = 'a' .
+  b = 'b' .
+
+IGNORE cr + lf + tab    
+
+PRODUCTIONS
+
+S = P .
+P = a P a 
+  |
+    b P b
+  |
+  .
+
+END S.
