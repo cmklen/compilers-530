@@ -1,0 +1,21 @@
+COMPILER Lua
+
+CHARACTERS
+
+	cr     = '\r' .
+	lf     = '\n' .
+	tab    = '\t' .
+
+TOKENS
+
+  a = 'a' .
+  b = 'b' .
+
+IGNORE cr + lf + tab    
+
+PRODUCTIONS
+
+Lua = P .
+P = a .
+
+END Lua.
