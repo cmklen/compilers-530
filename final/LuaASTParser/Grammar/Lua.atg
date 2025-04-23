@@ -1,4 +1,8 @@
+using Ast;
+
 COMPILER Lua
+
+public AstNode Ast;
 
 CHARACTERS
   letter  = 'A'..'Z' + 'a'..'z' .
@@ -54,38 +58,172 @@ IGNORE tab + cr + lf + ' '
 
 PRODUCTIONS
 
-Lua = { Statement } .
+Lua = Program<out AstNode ast> .
 
-Statement =
-  SimpleStatement
-  | IfStatement
-  | WhileStatement
-  | FunctionDecl
-  .
+Program<out AstNode node> (.
+  node = new AstBranch("Lua");
+  AstNode stmt;
+.)
+=
+  Statement<out stmt> (. ((AstBranch)node).Add(stmt); .) 
+.
 
-SimpleStatement =
-    ident ( AssignmentTail | FunctionCallTail ) .
+Ident<out string name> =
+  ident (. name = t.val; .)
+.
 
-AssignmentTail = '=' Expression .
-FunctionCallTail = lpar [ ArgList ] rpar .
+Number<out string val> =
+  number (. val = t.val; .)
+.
 
-IfStatement = if Expression then { Statement } [ else { Statement } ] end .
+Statement<out AstNode node> =
+    SimpleStatement<out node>
+  | IfStatement<out node>
+  | WhileStatement<out node>
+  | FunctionDecl<out node>
+  | LocalAssignment<out node>
+.
 
-WhileStatement = while Expression do { Statement } end .
+SimpleStatement<out AstNode node> =
+  Ident<out string name> (
+      AssignmentTail<name, out node>
+    | FunctionCallTail<name, out node>
+  ) .
 
-FunctionDecl = function ident lpar [ ParamList ] rpar { Statement } end .
+AssignmentTail<string name, out AstNode node> =
+  '=' Expression<out AstNode expr> 
+  (.
+    node = new AstBranch("Assignment");
+    ((AstBranch)node).Add(new AstLeaf(name));
+    ((AstBranch)node).Add(expr);
+  .) .
 
-ParamList = ident { comma ident } .
+FunctionCallTail<string name, out AstNode node> =
+  lpar [ ArgList<out AstNode args> ] rpar 
+  (.
+    node = new AstBranch("FunctionCall");
+    ((AstBranch)node).Add(new AstLeaf(name));
+    if (args != null) ((AstBranch)node).Add(args);
+  .) .
 
-ArgList = Expression { comma Expression } .
+LocalAssignment<out AstNode node> =
+  local Ident<out string name> '=' Expression<out AstNode expr>
+  (.
+    node = new AstBranch("LocalAssignment");
+    ((AstBranch)node).Add(new AstLeaf("Variable", name));
+    ((AstBranch)node).Add(expr);
+  .)
+.
 
-Expression = Term { AddOp Term } .
+IfStatement<out AstNode node> =
+  if Expression<out AstNode cond> then
+  (.
+    node = new AstBranch("If");
+    ((AstBranch)node).Add(cond);
+    AstNode thenBlock = new AstBranch("Then");
+    AstNode temp;
+  .)
+  (. Statement<out temp> { ((AstBranch)thenBlock).Add(temp); } .)
+  (.
+    ((AstBranch)node).Add(thenBlock);
+  .)
+  [ else (.
+    AstNode elseBlock = new AstBranch("Else");
+    { Statement<out temp> { ((AstBranch)elseBlock).Add(temp); } }
+    ((AstBranch)node).Add(elseBlock);
+  .)]
+  end
+.
 
-Term = Factor { MulOp Factor } .
+WhileStatement<out AstNode node> =
+  while Expression<out AstNode cond> do
+  (.
+    node = new AstBranch("While");
+    ((AstBranch)node).Add(cond);
+    AstNode body = new AstBranch("Body");
+    AstNode temp;
+  .)
+  (. Statement<out temp> { ((AstBranch)body).Add(temp); } .)
+  (.
+    ((AstBranch)node).Add(body);
+  .)
+  end
+.
 
-Factor =
-    number
-  | ident ( FunctionCallTail | )
-  | lpar Expression rpar .
+FunctionDecl<out AstNode node> =
+  function Ident<out string name> lpar [ ParamList<out AstNode params> ] rpar
+  (.
+    node = new AstBranch("FunctionDecl");
+    ((AstBranch)node).Add(new AstLeaf("FunctionName", name));
+    if (params != null) ((AstBranch)node).Add(params);
+    AstNode body = new AstBranch("Body");
+    AstNode temp;
+  .)
+  (. Statement<out temp> { ((AstBranch)body).Add(temp); } .)
+  (.
+    ((AstBranch)node).Add(body);
+  .)
+  end
+.
+
+ParamList<out AstNode node> =
+(.
+  node = new AstBranch("Params");
+  string name;
+.)
+  Ident<out name> (. ((AstBranch)node).Add(new AstLeaf("Param", name)); comma Ident<out name> { ((AstBranch)node).Add(new AstLeaf("Param", name)); } .)
+.
+
+ArgList<out AstNode node> =
+(.
+  node = new AstBranch("Args");
+  AstNode expr;
+.)
+  Expression<out expr> (. ((AstBranch)node).Add(expr); comma Expression<out expr> { ((AstBranch)node).Add(expr); } .)
+.
+
+Expression<out AstNode node> =
+  Term<out node>
+  (.
+    AstNode right;
+    string op;
+    AddOp<out op> Term<out right>
+    {
+      AstBranch temp = new AstBranch("AddOp", op);
+      temp.Add(node); temp.Add(right); node = temp;
+    }
+  .)
+.
+
+Term<out AstNode node> =
+  Factor<out node>
+  (.
+    AstNode right;
+    string op;
+    MulOp<out op> Factor<out right>
+    {
+      AstBranch temp = new AstBranch("MulOp", op);
+      temp.Add(node); temp.Add(right); node = temp;
+    }
+  .)
+.
+
+Factor<out AstNode node> =
+    Number<out val>
+  | Ident<out string name>
+    (
+      lpar ArgList<out AstNode args> rpar
+      (.
+        node = new AstBranch("FunctionCall");
+        ((AstBranch)node).Add(new AstLeaf("Callee", name));
+        ((AstBranch)node).Add(args);
+      .)
+    |
+      (.
+        node = new AstLeaf("Variable", name);
+      .)
+    )
+  | lpar Expression<out node> rpar
+.
 
 END Lua.

@@ -1,0 +1,127 @@
+COMPILER Lua
+
+GLOBALS
+  public AstNode Ast;
+
+CHARACTERS
+  letter  = 'A'..'Z' + 'a'..'z' .
+  digit  = '0'..'9' .
+  tab        = '\t'.
+  cr         = '\r'.
+  lf         = '\n'.
+  notQuote   = ANY - '"' - "\r\n".
+  newLine    = cr + lf.
+
+TOKENS
+  ident = letter { letter | digit | "_" } .
+  number = digit { digit } .
+  string   = '"' {notQuote} '"'.        // no check for valid escape sequences
+  
+  // ignoring goto
+  _if = "if".
+  then = "then".
+  else = "else".
+  elseif = "elseif".
+  end = "end".
+  function = "function".
+  local = "local".
+  return = "return".
+  while = "while".
+  do = "do".
+  for = "for".
+  in = "in".
+  repeat = "repeat".
+  until = "until".
+  break = "break".
+  and = "and".
+  or = "or".
+  not = "not".
+  true = "true".
+  false = "false".
+  nil = "nil".
+  comma     = ','.
+	semicolon = ';'.
+	colon     = ':'.
+	lpar      = '('.
+	rpar      = ')'.
+	lbrack    = '['.
+	rbrace    = '}'.
+	ellipsis  = "...".
+  AddOp = '+' | '-' .
+  MulOp = '*' | '/' .
+
+// ignoring multi-line comments because CoCo/R doesn't allow delimiters as long as 4 like "--[["
+COMMENTS FROM "--" TO lf
+
+IGNORE tab + cr + lf + ' '
+
+PRODUCTIONS
+
+Lua 
+  (. Statement<out AstNode stmt> 
+      {
+        if (Ast == null) {
+          Ast = stmt;
+        } else {
+          var block = Ast as AstBranch ?? new AstBranch("Block") { Ast };
+          block.Add(stmt);
+          Ast = block;
+        }
+      }
+  .) 
+= .
+
+Statement =
+  SimpleStatement
+  | IfStatement
+  | WhileStatement
+  | FunctionDecl
+  | LocalAssignment
+  .
+
+SimpleStatement<out AstNode node> =
+      ident<out string name> (
+      AssignmentTail<name, out node>
+    | FunctionCallTail<name, out node>
+  ) .
+
+AssignmentTail<string name, out AstNode node> 
+  (.
+      node = new AstBranch("Assignment");
+      ((AstBranch)node).Add(new AstLeaf(name));
+      ((AstBranch)node).Add(expr);
+  .) 
+=
+  '=' Expression<out AstNode expr> 
+  .
+
+LocalAssignment = local ident '=' Expression .
+
+FunctionCallTail<string name, out AstNode node> (.
+    node = new AstBranch("FunctionCall");
+    ((AstBranch)node).Add(new AstLeaf(name));
+    if (args != null) ((AstBranch)node).Add(args);
+  .) =
+  lpar [ ArgList<out AstNode args> ] rpar 
+  .
+
+IfStatement = _if Expression then { Statement } [ else { Statement } ] end .
+
+WhileStatement = while Expression do { Statement } end .
+
+FunctionDecl = function ident lpar [ ParamList ] rpar { Statement } end .
+
+ParamList = ident { comma ident } .
+
+ArgList = Expression { comma Expression } .
+
+Expression = Term { AddOp Term } .
+
+Term = Factor { MulOp Factor } .
+
+Factor =
+    number
+  | ident ( FunctionCallTail | )
+  | lpar Expression rpar .
+
+END Lua.
