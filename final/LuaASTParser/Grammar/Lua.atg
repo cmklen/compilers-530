@@ -18,7 +18,7 @@ TOKENS
   number = digit { digit } .
   string   = '"' {notQuote} '"'.        // no check for valid escape sequences
   
-  // ignoring goto
+  
   if = "if".
   then = "then".
   else = "else".
@@ -26,20 +26,9 @@ TOKENS
   end = "end".
   function = "function".
   local = "local".
-  return = "return".
   while = "while".
   do = "do".
-  for = "for".
-  in = "in".
-  repeat = "repeat".
-  until = "until".
-  break = "break".
-  and = "and".
-  or = "or".
-  not = "not".
-  true = "true".
-  false = "false".
-  nil = "nil".
+  return = "return".
   comma     = ','.
   semicolon = ';'.
   colon     = ':'.
@@ -52,6 +41,20 @@ TOKENS
   divide = '\\'.
   add = '+'.
   subtract = '-'.
+
+  // ignoring these as I'm only implementing a subset
+  goto = "goto".
+  repeat = "repeat".
+  until = "until".
+  break = "break".
+  and = "and".
+  or = "or".
+  not = "not".
+  true = "true".
+  false = "false".
+  for = "for".
+  in = "in".
+  nil = "nil".
 
 // ignoring multi-line comments because CoCo/R doesn't allow delimiters as long as 4 like "--[["
 COMMENTS FROM "--" TO lf
@@ -72,38 +75,50 @@ Program<AST parent>
   AST node = new AST (parent, "Program");
 .)
 =
-  Statement<node> 
+  Block<node> 
 .
 
 Ident<AST parent> =
-  ident (. new TerminalAST(parent, "Ident", t.val); .)
+  ident (. new TerminalAST(parent, "Identifier", t.val); .)
 .
 
 Number<AST parent> =
   number (. new TerminalAST(parent, "Number", t.val); .)
 .
 
-Statement<AST parent> 
+String<AST parent> =
+  string (. new TerminalAST(parent, "String", t.val); .)
+  // the dot file doesn't like to visualize the string and will freak out
+.
+
+Block<AST parent> 
 (. 
-AST node = new AST(parent, "Statement"); 
+AST node = new AST(parent, "Block"); 
 .)
 = 
-  SimpleStatement<node> 
-  /*| IfStatement<node>*/
-  /*| WhileStatement<node>*/
+  SimpleBlock<node> 
+  | IfBlock<node>
+  | WhileBlock<node>
   | FunctionDecl<node>
   | LocalAssignment<node>
 .
 
-SimpleStatement<AST parent> 
+SimpleBlock<AST parent> 
 (. 
-AST node = new AST(parent, "SimpleStatement"); 
+AST node = new AST(parent, "SimpleBlock"); 
 .)
 =
   Ident<node> (
       AssignmentTail<node>
     | FunctionCallTail<node>
   ) .
+
+TableDecl<AST parent> =
+(. 
+AST node = new AST(parent, "TableDecl"); 
+.)
+  '{' [ ArgList<node> ] '}'
+.
 
 AssignmentTail<AST parent> =
 (. 
@@ -133,44 +148,36 @@ local Ident<node> (. terminal = new TerminalAST(node, "Identifier", t.val); .)
     ]
 .
 
-/*
-IfStatement<AST parent> =
-  if Expression<AST cond> then
-  (.
-    node = new AstBranch("If");
-    ((AstBranch)node).Add(cond);
-    AST thenBlock = new AstBranch("Then");
-    AST temp;
-  .)
-  (. Statement<temp> { ((AstBranch)thenBlock).Add(temp); } .)
-  (.
-    ((AstBranch)node).Add(thenBlock);
-  .)
-  [ else (.
-    AST elseBlock = new AstBranch("Else");
-    { Statement<temp> { ((AstBranch)elseBlock).Add(temp); } }
-    ((AstBranch)node).Add(elseBlock);
-  .)]
-  end
-.
-*/
 
-/*
-WhileStatement<AST parent> =
-  while Expression<AST cond> do
-  (.
-    node = new AstBranch("While");
-    ((AstBranch)node).Add(cond);
-    AST body = new AstBranch("Body");
-    AST temp;
-  .)
-  (. Statement<temp> { ((AstBranch)body).Add(temp); } .)
-  (.
-    ((AstBranch)node).Add(body);
-  .)
-  end
+IfBlock<AST parent> 
+(. 
+    AST node = new AST(parent, "IfStatement"); 
+.)
+=
+    if Expression<node> then
+        Block<node>
+        {
+            elseif Expression<node> then
+            Block<node>
+            (. node.AddChild(new AST(node, "ElseIfBranch")); .)
+        }
+        [ else
+            Block<node>
+            (. node.AddChild(new AST(node, "ElseBranch")); .)
+        ]
+    end
 .
-*/
+
+
+WhileBlock<AST parent>
+(. 
+    AST node = new AST(parent, "WhileBlock"); 
+.)
+=
+    while Expression<node> do
+        Block<node>
+    end
+.
 
 FunctionDecl<AST parent> 
  (.
@@ -180,8 +187,17 @@ FunctionDecl<AST parent>
 =
  function Ident<node> (. terminal = new TerminalAST(node, "Identifier", t.val); .)
  lpar [ ParamList<node> ] rpar
- Statement<node>
+ [ Block<node> ]
+ [ ReturnStatement<node> ]
  end
+.
+
+ReturnStatement<AST parent>
+(. 
+    AST node = new AST(parent, "ReturnStatement");
+.)
+=
+    return [ Expression<node> ]
 .
 
 ParamList<AST parent> 
@@ -201,7 +217,7 @@ ArgList<AST parent> =
     AST node = new AST(parent, "ArgList");
     TerminalAST terminal = null;
 .)
-    Expression<node> (. terminal = new TerminalAST(node, "Arg", t.val); .)
+    Expression<node>
     {
        comma Expression<node> (. terminal = new TerminalAST(node, "Arg", t.val); .)
     }
@@ -213,26 +229,21 @@ Expression<AST parent>
     TerminalAST terminal = null;	
 .)
 = 
-Term<node> 
-.
-
-Term<AST parent> 
-(. 
-    AST node = new AST(parent, "Term");
-.)
-=
-    Factor<node>
+Factor<node>
 .
 
 Factor<AST parent> 
 (. 
     AST node = new AST(parent, "Factor");
+    TerminalAST terminal = null;
 .)
 =
-  Number<node> (. node.AddChild(new TerminalAST(node, "Number", t.val)); .)
- | Ident<node> (. node.AddChild(new TerminalAST(node, "Identifier", t.val)); .)
+   Number<node>
+ | Ident<node>
  | FunctionCallTail<node>
  | lpar Expression<node> rpar
+ | TableDecl<node>
+ | String<node>
 .
 
 END Lua.
