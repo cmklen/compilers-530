@@ -1,4 +1,10 @@
-﻿namespace LuaASTParser.AST
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using System.IO;
+
+
+namespace ASTClass
 {
     public enum Operator
     {
@@ -7,6 +13,9 @@
 
         // ======================= Unary Operators ======================
         Inc, Dec,
+
+        // ======================= Assignment Operators ======================
+        Assign,
 
         NoOp
     };
